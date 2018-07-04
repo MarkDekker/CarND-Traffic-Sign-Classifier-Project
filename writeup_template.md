@@ -1,10 +1,5 @@
 # **Traffic Sign Recognition** 
 
-## Writeup
-
-### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
-
----
 
 **Build a Traffic Sign Recognition Project**
 
@@ -20,106 +15,149 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [image1]: ./examples/visualization.jpg "Visualization"
-[image2]: ./examples/grayscale.jpg "Grayscaling"
-[image3]: ./examples/random_noise.jpg "Random Noise"
-[image4]: ./examples/placeholder.png "Traffic Sign 1"
+[image2]: ./writeup_assets/processed_image_smaple.png "Processing"
+[image3]: ./writeup_assets/augmented_signs.png "Augmented Signs"
+[image4]: ./writeup_assets/confusion_matrix.png "Confusion matrix for test data."
 [image5]: ./examples/placeholder.png "Traffic Sign 2"
 [image6]: ./examples/placeholder.png "Traffic Sign 3"
 [image7]: ./examples/placeholder.png "Traffic Sign 4"
 [image8]: ./examples/placeholder.png "Traffic Sign 5"
 
-## Rubric Points
-### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/481/view) individually and describe how I addressed each point in my implementation.  
-
 ---
-### Writeup / README
-
-#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one. You can submit your writeup as markdown or pdf. You can use this template as a guide for writing the report. The submission includes the project code.
-
-You're reading it! and here is a link to my [project code](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/Traffic_Sign_Classifier.ipynb)
+## **Reflection**
 
 ### Data Set Summary & Exploration
 
-#### 1. Provide a basic summary of the data set. In the code, the analysis should be done using python, numpy and/or pandas methods rather than hardcoding results manually.
+To start off, I got a feel for the data set by exploring its dimensions and having a look at some sample data.
 
-I used the pandas library to calculate summary statistics of the traffic
-signs data set:
+The size of the data set is modest at __34799 training images__, with a further __12630 images for testing__ and __4410 images for validation__.
 
-* The size of training set is ?
-* The size of the validation set is ?
-* The size of test set is ?
-* The shape of a traffic sign image is ?
-* The number of unique classes/labels in the data set is ?
+The data was already pre-processed into an easy-to-handle format as a numpy array of 32x32 pixel images with 3 colour channels.
+
+In total there are 43 different sign classes, each of which is represented in the training, validation and test sets respectively.
+
+Below is a sample of the images contained in the data set:
+
+![alt text][image5]
 
 #### 2. Include an exploratory visualization of the dataset.
 
-Here is an exploratory visualization of the data set. It is a bar chart showing how the data ...
+In the graph below one can see the distribution of the images per class for each of the respective data sets:
 
-![alt text][image1]
+![Bar chart of image distribution per class][image1]
+
+From this, we can conclude that the data set is highly unbalanced with some classes being represented by as few as 200 signs, while others contain in excess of 2000 signs.  With such a large imbalance, there is a risk that the model will be heavily weighted towards identifying the classes that contain more training data.
 
 ### Design and Test a Model Architecture
 
-#### 1. Describe how you preprocessed the image data. What techniques were chosen and why did you choose these techniques? Consider including images showing the output of each preprocessing technique. Pre-processing refers to techniques such as converting to grayscale, normalization, etc. (OPTIONAL: As described in the "Stand Out Suggestions" part of the rubric, if you generated additional data for training, describe why you decided to generate additional data, how you generated the data, and provide example images of the additional data. Then describe the characteristics of the augmented training set like number of images in the set, number of images for each class, etc.)
+#### Image pre-porcessing
 
-As a first step, I decided to convert the images to grayscale because ...
+1. According to [LeCun and Sermanet](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf) working in grayscale reduces the processing requirements and does not appear to impact classification significantly. Intuitively this seems strange though, since the colour information clearly carries information that aids in distinguishing between classes. (Take the priority road, stop and keep right signs which are yellow, red and blue respectively)
 
-Here is an example of a traffic sign image before and after grayscaling.
+   For this reason, the number of colour channels is defined by a parameter in my solution, to be able to switch between colour and grayscale easily.
 
-![alt text][image2]
+2. The next step was to scale the pixel data to have zero mean and unit norm for the entire image.  The tensor flow function `tf.image.per_image_standardization()` was used for this. The normalising is particularly useful for this data set, extracting a lot of additional detail from the images.
 
-As a last step, I normalized the image data because ...
+   Below are some examples of the conversion:
 
-I decided to generate additional data because ... 
+  ![Result after image preprocessing][image2]
 
-To add more data to the the data set, I used the following techniques because ... 
+Given that the data set is so imbalanced and it is only modestly sized, I created a subroutine to augment the data set. The function `augment_image_data(images_in, examples_required)` accepts the image set to be augmented and the total number of examples required for this image set. It then stretches, rotates, blurs and changes the brightness on the images with a randomised intensity until it reaches the required number of examples.  
 
-Here is an example of an original image and an augmented image:
+For this, the training set was separated into bins of images of each respective class. These are then fed into the function and finally combined and reshuffled again.
 
-![alt text][image3]
+It was decided to balance the image sets so that each contains at least 1000 images. 
 
-The difference between the original data set and the augmented data set is the following ... 
+Here are some examples of augmented images:
 
+![Augmented Signs][image3]
 
-#### 2. Describe what your final model architecture looks like including model type, layers, layer sizes, connectivity, etc.) Consider including a diagram and/or table describing the final model.
+The augmented data set now has a size of 61799 compared to 34799 for the original training data set.
+
+#### Final Model Architecture
 
 My final model consisted of the following layers:
 
-| Layer         		|     Description	        					| 
+| Layer         		    |     Description	        					            | 
 |:---------------------:|:---------------------------------------------:| 
-| Input         		| 32x32x3 RGB image   							| 
-| Convolution 3x3     	| 1x1 stride, same padding, outputs 32x32x64 	|
-| RELU					|												|
-| Max pooling	      	| 2x2 stride,  outputs 16x16x64 				|
-| Convolution 3x3	    | etc.      									|
-| Fully connected		| etc.        									|
-| Softmax				| etc.        									|
-|						|												|
-|						|												|
- 
+| Input         		    | 32x32x1 RGB image   							            | 
+|						            |												                        |
+| Convolution 5x5     	| 1x1 stride, valid padding, outputs 28x28x16 	|
+| RELU					        |												                        |
+| Max pooling	      	  | 2x2 stride,  outputs 14x14x16 				        |
+|						            |												                        |
+| Convolution 5x5     	| 1x1 stride, valid padding, outputs 10x10x32 	|
+| RELU					        |												                        |
+| Max pooling	      	  | 2x2 stride,  outputs 5x5x32 				          |
+|						            |												                        |
+| Flatten	              | Flattens ConvNet outputs to 800x1     				|
+| Fully connected		    | outputs 240        									          |
+| RELU				          |         									                    |
+|	Dropout               |	50% dropout probability during training       |
+|						            |												                        |
+| Flatten	              | Flattens ConvNet outputs to 800x1     				|
+| Fully connected		    | outputs 240        									          |
+| RELU				          |         									                    |
+|	Dropout               |	50% dropout probability during training       |
+|						            |												                        |
+| Fully connected		    | outputs 84        									          |
+| RELU				          |         									                    |
+|	Dropout               |	50% dropout probability during training       |
+|						            |												                        |
+| Fully connected		    | outputs 43 to match number of classes         |
 
 
-#### 3. Describe how you trained your model. The discussion can include the type of optimizer, the batch size, number of epochs and any hyperparameters such as learning rate.
+#### Training the model
 
-To train the model, I used an ....
+A variety of techniques were used to improve the performance and accuracy when training the model.  The focus here was primarily on the hyperparameters.
 
-#### 4. Describe the approach taken for finding a solution and getting the validation set accuracy to be at least 0.93. Include in the discussion the results on the training, validation and test sets and where in the code these were calculated. Your approach may have been an iterative process, in which case, outline the steps you took to get to the final solution and why you chose those steps. Perhaps your solution involved an already well known implementation or architecture. In this case, discuss why you think the architecture is suitable for the current problem.
+- The batch size does not appear to influence the model that significantly, although the best values were obtained for __128 samples per batch__.
+- Similarly, using the colour information of the images did not appear to improve the result.
+- Increasing the learning rate at 0.01 leads to divergence of the model, while a value around 0.001 works reasonably well. However, it is commonly found that once the neural net has been trained to within the vicinity of an optimum, the learning rate should be decreased to improve the result further. Furthermore, [Loshchilov & Hutter](https://arxiv.org/abs/1608.03983) found that periodically raising the learning rate back to a higher level leads to more robust minima, which should also mean more generalisable models. This is why I opted to use stochastic gradient descent (SGDR) with restarts as described in their paper (tensor flow function `tf.train.cosine_decay_restarts()`).
+
+
+
+ - Hyperparameters
+
+
+#### Results and Training
 
 My final model results were:
-* training set accuracy of ?
-* validation set accuracy of ? 
-* test set accuracy of ?
+* training set accuracy of 1.00
+* validation set accuracy of 0.981
+* test set accuracy of 0.962
 
-If an iterative approach was chosen:
-* What was the first architecture that was tried and why was it chosen?
-* What were some problems with the initial architecture?
-* How was the architecture adjusted and why was it adjusted? Typical adjustments could include choosing a different model architecture, adding or taking away layers (pooling, dropout, convolution, etc), using an activation function or changing the activation function. One common justification for adjusting an architecture would be due to overfitting or underfitting. A high accuracy on the training set but low accuracy on the validation set indicates over fitting; a low accuracy on both sets indicates under fitting.
-* Which parameters were tuned? How were they adjusted and why?
-* What are some of the important design choices and why were they chosen? For example, why might a convolution layer work well with this problem? How might a dropout layer help with creating a successful model?
+The network architecture is close to unchanged from LeNet-5 with more filters in the convolutional layers as well as more neurons in the first fully connected layer. Finally dropout was also added to the third and fourth fully connected layers for improved training performance.
 
-If a well known architecture was chosen:
-* What architecture was chosen?
-* Why did you believe it would be relevant to the traffic sign application?
-* How does the final model's accuracy on the training, validation and test set provide evidence that the model is working well?
+This architecture was chosen because it is simple and small compared to more modern networks such as AlexNet or ResNet50 so it seemed like a good starting point to get a feel for the challenge.
+
+To begin with, the LeNet-5 model was used as-is, without dropout or increasing the size of the hidden layers. The hyperparameters were tuned to see what the maximum performance of this model could be.
+
+- The batch size does not appear to influence the model that significantly, although the best values were obtained for __128 samples per batch__.
+- Similarly, using the colour information of the images did not appear to improve the result.
+- Increasing the learning rate at 0.01 leads to divergence of the model, while a value around 0.001 works reasonably well. However, it is commonly found that once the neural net has been trained to within the vicinity of an optimum, the learning rate should be decreased to improve the result further. Furthermore, [Loshchilov & Hutter](https://arxiv.org/abs/1608.03983) found that periodically raising the learning rate back to a higher level leads to more robust minima, which should also mean more generalisable models. This is why I opted to use stochastic gradient descent (SGDR) with restarts as described in their paper (tensor flow function `tf.train.cosine_decay_restarts()`).
+- To get the best performance, it was found that the learning rate should be kept high for the first 20 epochs after which decreasing the learning rate with SGDR results in the fine tuning required when it is needed.
+
+This approach already yielded accuracy well above 0.9 for the validation set. After adding dropout to the fully connected layers, this already exceeded 0.95. This is because adding dropout reduces the tendency of the model to overfit the data since more neurons are forced to contribute to a successful classification when others are 'switched off'.
+
+Finally, the size of the hidden layers was increased, increasing the complexity that the model can capture.  This ultimately yielded the final accuracy scores.
+
+It was surprising to find that using the augmented test data resulted in significantly worse performance during training.  This could be because the distortions are too severe, which means that we are adding noise not data.  Nevertheless all the samples looked at from the augmentation set were still recognisable albeit cropped or severely blurred in some cases. This means that this accuracy was achieved without using the augmented data set.
+
+I believe that while the model appears to work well as is, there is still potential for future improvements. On a large data set, misclassifying 4% of images leads to many mistakes.  A rate that would not be acceptable in an operational Autonomous vehicle. This is especially apparent when one looks at the confusion matrix for the results on the test set:
+
+![Confusion Matrix for test results][image4] 
+
+From this we see that there are clearly many misclassifications among the speed limits, which is understandable since these look so similar but it could also have disastrous consequences.
+
+What is especially surprising is the relatively low accuracy for labels with many training images such as the "80km/h Speed Limit" when compared to other signs with far fewer associated images such as "End of all Speed and Passing Limits".
+
+If we have a closer look at the misclassifications in each individual set, we gain more information on what is going wrong but also about the data in particular.
+
+
+
+
+
  
 
 ### Test a Model on New Images
