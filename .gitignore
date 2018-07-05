@@ -1,1 +1,5 @@
 traffic-signs-data/
+lenet*
+checkpoint
+Best_0.983/
+.ipynb_checkpoints/
