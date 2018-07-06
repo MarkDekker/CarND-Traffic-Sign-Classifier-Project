@@ -46,7 +46,7 @@ The size of the data set is modest at __34799 training images__, with a further 
 
 The data was already pre-processed into an easy-to-handle format as a numpy array of 32x32 pixel images with 3 colour channels.
 
-In total there are 43 different sign classes, each of which is represented in the training, validation and test sets respectively.
+In total, there are 43 different sign classes, each of which is represented in the training, validation and test sets respectively.
 
 Below is a sample of the images contained in the data set:
 
@@ -62,13 +62,13 @@ From this, we can conclude that the data set is highly unbalanced with some clas
 
 ## **Design and Test a Model Architecture**
 
-### Image pre-porcessing
+### Image pre-processing
 
 1. According to [LeCun and Sermanet](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf) working in grayscale reduces the processing requirements and does not appear to impact classification significantly. Intuitively this seems strange though, since the colour information clearly carries information that aids in distinguishing between classes. (Take the priority road, stop and keep right signs which are yellow, red and blue respectively)
 
    For this reason, the number of colour channels is defined by a parameter in my solution, to be able to switch between colour and grayscale easily.
 
-2. The next step was to scale the pixel data to have zero mean and unit norm for the entire image.  The tensor flow function `tf.image.per_image_standardization()` was used for this. The normalising is particularly useful for this data set, extracting a lot of additional detail from the images.
+2. The next step was to scale the pixel data to have zero mean and unit norm for each image.  The tensor flow function `tf.image.per_image_standardization()` was used for this. The normalising is particularly useful for this data set, extracting a lot of additional detail from the images.
 
    Below are some examples of the conversion:
 
@@ -76,7 +76,7 @@ From this, we can conclude that the data set is highly unbalanced with some clas
 
 Given that the data set is so imbalanced and it is only modestly sized, I created a subroutine to augment the data set. The function `augment_image_data(images_in, examples_required)` accepts the image set to be augmented and the total number of examples required for this image set. It then stretches, rotates, blurs and changes the brightness on the images with a randomised intensity until it reaches the required number of examples.  
 
-For this, the training set was separated into bins of images of each respective class. These are then fed into the function and finally combined and reshuffled again.
+For this, the training set was separated into bins of images of each respective class. These are then fed into the function and finally combined and reshuffled again, after they have been augmented.
 
 It was decided to balance the image sets so that each contains at least 1000 images. 
 
@@ -107,7 +107,6 @@ My final model consisted of the following layers:
 | RELU				          |         									                    |
 |	Dropout               |	50% dropout probability during training       |
 |						            |												                        |
-| Flatten	              | Flattens ConvNet outputs to 800x1     				|
 | Fully connected		    | outputs 240        									          |
 | RELU				          |         									                    |
 |	Dropout               |	50% dropout probability during training       |
@@ -122,9 +121,9 @@ My final model consisted of the following layers:
 ### Results and Training
 
 My final model results were:
-* training set accuracy of 1.00
-* validation set accuracy of 0.981
-* test set accuracy of 0.962
+* Training set accuracy of 1.00
+* Validation set accuracy of 0.981
+* Test set accuracy of 0.962
 
 The network architecture is close to unchanged from LeNet-5 with more filters in the convolutional layers as well as more neurons in the first fully connected layer. Finally dropout was also added to the third and fourth fully connected layers for improved training performance.
 
@@ -134,18 +133,18 @@ To begin with, the LeNet-5 model was used as-is, without dropout or increasing t
 
 - The batch size does not appear to influence the model that significantly, although the best values were obtained for __128 samples per batch__.
 - Similarly, using the colour information of the images did not appear to improve the result.
-- Increasing the learning rate at 0.01 leads to divergence of the model, while a value around 0.001 works reasonably well. However, it is commonly found that once the neural net has been trained to within the vicinity of an optimum, the learning rate should be decreased to improve the result further. Furthermore, [Loshchilov & Hutter](https://arxiv.org/abs/1608.03983) found that periodically raising the learning rate back to a higher level leads to more robust minima, which should also mean more generalisable models. This is why I opted to use stochastic gradient descent (SGDR) with restarts as described in their paper (tensor flow function `tf.train.cosine_decay_restarts()`).
+- Increasing the learning rate to 0.01 leads to divergence of the model, while a value around 0.001 results in faster convergence without ultimately leading to divergence. However, it is commonly found that once the neural net has been trained to within the vicinity of an optimum, the learning rate should be decreased to improve the result further. Furthermore, [Loshchilov & Hutter](https://arxiv.org/abs/1608.03983) found that periodically raising the learning rate back to a higher level leads to more robust minima, which should also mean more generalisable models. This is why I opted to use stochastic gradient descent (SGDR) with restarts as described in their paper (tensor flow function `tf.train.cosine_decay_restarts()`).
 - To get the best performance, it was found that the learning rate should be kept high for the first 20 epochs after which decreasing the learning rate with SGDR results in the fine tuning required when it is needed.
 
-The initial results were not in line with what was expected, in many cases not even reaching an accuracy above 0.6. After playing with all conceivable hyperparameters, it was finally found that the initialisation of the model weights plays a crucial role. Changing the standard deviation to 0.05 had pronounced effects, yielded accuracy well above 0.9 for the validation set. 
+The initial results were not in line with what was expected, in many cases not even reaching an accuracy above 0.6. After playing with all conceivable hyperparameters, it was finally found that the initialisation of the model weights plays a crucial role. Changing the standard deviation to 0.05 had pronounced effects, yielding accuracy well above 0.9 for the validation set. 
 
 After adding dropout to the fully connected layers, the accuracy exceeded 0.95. This is because adding dropout reduces the tendency of the model to overfit the data since more neurons are forced to contribute to a successful classification when others are 'switched off'.
 
 Finally, the size of the hidden layers was increased, increasing the complexity that the model can capture.  This ultimately yielded the final accuracy scores.
 
-It was surprising to find that using the augmented test data resulted in significantly worse performance during training.  This could be because the distortions are too severe, which means that we are adding noise not data.  Nevertheless all the samples looked at from the augmentation set were still recognisable albeit cropped or severely blurred in some cases. This means that this accuracy was achieved without using the augmented data set.
+It was surprising to find that using the augmented test data resulted in significantly worse performance during training.  This could be because the distortions are too severe, which means that we are adding noise as opposed to more data.  Nevertheless, all the samples looked at from the augmentation set were still recognisable albeit cropped or severely blurred in some cases. This means that all results described here were obtained without using the augmented data set.
 
-I believe that while the model appears to work well as is, there is still potential for future improvements. On a large data set, misclassifying 4% of images leads to many mistakes.  A rate that would not be acceptable in an operational Autonomous vehicle. This is especially apparent when one looks at the confusion matrix for the results on the test set:
+I believe that while the model appears to work well as is, there is still potential for future improvements. On a large data set, misclassifying 4% of images leads to many mistakes.  A rate that would not be acceptable in an operational autonomous vehicle. This is especially apparent when one looks at the confusion matrix for the results on the test set:
 
 ![Confusion Matrix for test results][image5] 
 
@@ -167,14 +166,14 @@ __100km/h Speed Limit__
 
 From these examples it becomes clear that the "raw data" was already augmented and given that these images look so similar, the model effectively only misclassified one image which was repeated in the data. The flip side of this is that classifying a single image correctly that has multiple slightly augmented copies in the data set would artificially raise the accuracy.
 
- It is nevertheless surprising that this image was misclassified since the shape and details of the sign are clearly visible.
+It is nevertheless surprising that this image was misclassified since the shape and details of the sign are clearly visible.
 
 
 | 20km/h Speed Limit    |  30km/h Speed Limit	|   Traffic Signals	|  General Caution	|
 |:---------------------:|:-------------------:|:-----------------:|:--------------:| 
 | ![Mis][image8]    |  ![Mis][image9]	|   ![Mis][image10]	|  ![Mis][image11]	|
 
-The reason for the misclassification of these remaining images is clearer, given that they are hardly recognisable due to distortions.
+The reason for the misclassification of these remaining images is clearer, given that they are even hardly recognisable to humans due to the distortions.
 
 
 ## **Testing the Model on New Images**
@@ -183,7 +182,7 @@ Here are 12 German traffic signs that I found on the web:
 
 ![''][image12]
 
-Some images in the set were specifically chosen because they might be difficult to classify. The "Bumpy Road" sign is partially covered by a bikini, one of the "No Entry" signs is at a very oblique angle with difficult lighting, the "End of No Passing" sign is partially covered and surrounded by other signs that my confuse the classifier and finally the "Turn Right Ahead" sign is covered in light stickers.
+Some images in the set were specifically chosen because they might be difficult to classify. The "Bumpy Road" sign is partially covered by a bikini, one of the "No Entry" signs is at a very oblique angle with difficult lighting, the "End of No Passing" sign is partially covered and surrounded by other signs that might confuse the classifier and finally the "Turn Right Ahead" sign is covered in stickers.
 
 ### Model Predictions
 
@@ -227,7 +226,7 @@ As would be expected, the signs that deviate more from the training data result 
 
 While on paper the model appears to work well, a closer look reveals that it still misclassifies easily identifiable signs.  It was also found that the performance on new data is not as robust as would be desired.
 
-While it has consistently been found that using colour information for training the models did not aid significantly, this is highly counter intuitive.  It may be that the architecture of the neural network is something that is preventing it from extracting the relevant information from the colour channels.  Something that may be interesting here could be parallel convolutions for each colour channel, or a parallel fully connected layer that receives the image as an input.
+While it has consistently been found that using colour information for training the models did not help significantly, this is highly counter intuitive.  It may be that the architecture of the neural network is something that is preventing it from extracting the relevant information from the colour channels.  Something that may be interesting here could be parallel convolutions for each colour channel, or a parallel fully connected layer that receives the image as an input.
 
 It is expected that further improvements can be achieved with more careful and meticulous data augmentation. Examples of this include flipping images that are side agnostic, such as "Yield" and "Do Not Enter", using flipped signs containing arrows (keep right, right turn ahead ...) to augment the complimentary sign data sets (keep left, left turn ahead ...), using rotations and stretching judiciously and adding other distortions such as lens flares or obstructions.
 
